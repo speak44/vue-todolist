@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>todos</title>
+    <link rel="stylesheet" type="text/css" href="css/base.css">
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+</head>
+
+<body>
+    <section class="todoapp">
+        <div id="box">
+            <header class="header" >
+                <h1>todos</h1>
+                <input
+                class="new-todo"
+                placeholder="请输入内容"
+                v-model="newcont"
+                @keyup.enter.exact="listpush" />
+            </header>
+            <section class="main">
+                <input
+                class="toggle-all"
+                type="checkbox"
+                v-model="allchecked"
+                v-show="list.length"/>
+                <ul class="todo-list">
+                    <li
+                    :class="{completed:val.checked,editing:dbID===val.id}"
+                    v-for="val ,i in hashchange"
+                    :key="val.id"
+                    >
+                        <div class="view">
+                            <input class="toggle"
+                            type="checkbox"
+                             v-model="val.checked"
+                             />
+                            <label
+                            @dblclick="dbinput(val)"
+                            >{{val.cont}}</label>
+                            <button
+                            class="destroy"
+                            @click="removelist(i)"
+                            ></button>
+                        </div>
+                        <!-- 失焦修改、enter修改、esc 返回原数组 -->
+                        <input
+                        v-model="val.cont"
+                        @blur="mod()"
+                        @keyup.enter="mod()"
+                        @keyup.esc="rest(val)"
+                        class="edit" />
+                    </li>
+                </ul>
+            </section>
+            <footer class="footer" v-show="list.length">
+	            <span class="todo-count">
+	            	<strong>{{listfalselength}}</strong>
+	            	<span>条未选中</span>
+	            </span>
+	            <ul class="filters">
+	            	<li><a href="#/all" :class="{selected:hash==='all'}">All</a></li>
+	            	<li><a href="#/active" :class="{selected:hash==='active'}">Active</a></li>
+	            	<li><a href="#/completed" :class="{selected:hash==='completed'}">Completed</a></li>
+	           	</ul>
+            </footer>
+        </div>
+    </section>
+</body>
+<script src="vue.js" type="text/javascript"></script>
+<script>
+	/*
+		1. 增删改查数据，要使用localStorage做数据持久化
+		2. 根据hash不同，过滤渲染的数据
+			a. 全部任务
+			b. 完成的任务
+			c. 未完成的任务
+		3. 自己设计数据结构
+	*/
+// class completed 删除样式   editing  隐藏li样式
+  let vm=new Vue({
+    el:'#box',
+    //事件监听
+    watch:{
+      list:{
+        deep:true,
+        handler(){
+          localStorage.setItem('list', JSON.stringify(this.list))
+        }
+      }
+    },
+    data:{
+      list:JSON.parse(localStorage.getItem('list'))||[],
+    //input 添加的内容
+      newcont:'',
+      // 双击记录id
+      dbID:'',
+      //存储原来内容
+      oldcont:'',
+      hash:'all'
+    },
+    methods:{
+        listpush(){
+          if(this.newcont){
+            this.list.push({
+                id:Date.now()+Math.random(),cont:this.newcont,checked:false
+            })
+            this.newcont=''
+          }
+        },
+        removelist(newi){
+            this.list.splice(newi,1)
+        },
+        //双击事件
+        dbinput(dblist){
+          this.dbID=dblist.id
+          // console.log(dblist.cont)
+          this.oldcont=dblist.cont
+        },
+        //修改内容
+        mod(){
+          this.dbID=''
+        },
+        //还原内容
+        rest(val){
+          val.cont=this.oldcont
+          this.dbID=''
+        }
+
+    },
+    computed:{
+      listfalselength:{
+        get(){
+          let newlistnochecked=this.list.filter((item) => {
+            return !item.checked
+          })
+          return newlistnochecked.length
+        }
+      },
+      allchecked:{
+        get(){
+          let newlistall=this.list.filter((item) => {
+            return item.checked
+          })
+          if(this.list.length){
+            return this.list.length==newlistall.length
+          }else{
+            return false
+          }
+        },
+        set(newcheched){
+          this.list.forEach((e,i)=>{
+              e.checked=newcheched
+          })
+        }
+      },
+      hashchange(){
+        switch (this.hash) {
+          case 'active':
+            return this.list.filter((e,i)=>!e.checked)
+          break;
+          case 'completed':
+            return this.list.filter((e,i)=>e.checked)
+          break;
+          default:
+          return this.list
+          break
+        }
+      }
+    }
+  })
+  window.onhashchange=()=>{
+  let hash=window.location.hash.substr(2);
+  vm.hash=hash
+  }
+</script>
+
+</html>
